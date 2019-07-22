@@ -7,7 +7,6 @@
 /*
 [[ FRAP ( Fire Report As soon as Possible) ]]
 :: All-In-One fire extinguisher for automatic reporting and maintenance
-
 [[ Features ]]
   
   1. Automatic fire report.
@@ -24,15 +23,10 @@
   3. Gas and Temperature remote detection.
     ⚫ Listening to detecting gas and temperature.
     ⚫ If one of them is over its threshold, it will send both data to the main board.
-
 [[ Features in MAIN BORAD ]] 
-
   1. Listening to SLAVE BOARD through HC-05
-
   2. Detecting fire extinguisher's existence through HC-SR04
-
   3. Switching to the maintenance mode that doesn't activate sending notifications through 
-
   4. Sending notifications automatically if some conditions are satisfied through 
                                          [ GAS / TEMPERATURE / PRESSURE ] 
 */
@@ -63,9 +57,10 @@ char *speech[11] = {"spEMERGENCY", "spONE", "spTWO", "spTHREE", "spFOUR", "spFIV
 /* Pin variables*/
 const int trigPin = A0;
 const int echoPin = A1;
+const int speakPin = A3;
 
 /* Third-party variables */
-const float D = 100; // = Distance threshold
+const float D = 5; // = Distance threshold
 const float T = 100; // = Temperature threshold
 const float G = 100; // = Gas threshold
 int data[2] = {0};
@@ -84,7 +79,7 @@ float Get_T();
 float Get_G();
 void SendNotification(float temperature_from_slave, float gas_from_slave);
 float returnTemperature(float sensorValue);
-void printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm);
+void printTest(uint32_t temp, float data0, float data1, uint32_t Distance_cm);
 
 /**************************************************************************************/
 /**************************************************************************************/
@@ -93,24 +88,21 @@ void printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm)
 
 void setup() {
   pinMode(trigPin,OUTPUT);
+  pinMode(speakPin, OUTPUT);
   pinMode(echoPin, INPUT);
   Serial.begin(9600);
-
-  while (!Serial) {
-    ;
-  }
   
   Serial.println("Hello World!");
   mySerial.begin(9600);
 }
 
 void loop() {
-  uint8_t temp = daytosecond;
-  
+  uint32_t temp = daytosecond;
   if (mySerial.available()) { // data from slave
-    data[0] = mySerial.read();
-    data[1] = mySerial.read();  
-    Serial.println(data[0],data[1]);
+
+    // data is saved
+    data[0] = mySerial.parseFloat();
+    data[1] = mySerial.parseFloat();
   }
   
   /* 1. Fire extinguisher management */
@@ -120,7 +112,6 @@ void loop() {
 
   if (Flag){
       temp--;
-      delay(1000);
       if(temp == 0){
         Clean_Count--;
         temp = daytosecond;
@@ -129,7 +120,6 @@ void loop() {
           Flag = false;
           Clean = true;
           Clean_Count = 30;
-          delay(1000);
         }
     }
   /* 2. Ultrasonic wave detection */
@@ -140,16 +130,16 @@ void loop() {
   digitalWrite(trigPin, LOW);
   duration = pulseIn(echoPin,HIGH);
   uint32_t Distance_cm = Distance(duration);
-  
   if (Distance_cm > D){
       voice.say(speech[Pressure_Count]);
-      delay(1000);
+       /* DEBUGGING */
+      //printTest(temp, data[0], data[1], Distance_cm);
       Pressure_Count--;
-
       if(Pressure_Count == 0){
         SendNotification(Get_T(), Get_G());
         voice.say(speech[0]);
         Pressure_Count = 10;
+        
         }
     }
   else{
@@ -160,9 +150,6 @@ void loop() {
   if (checkFunction(Get_T(), Get_G(), T, G)){ // one of them is over its threshold.
       SendNotification(Get_T(), Get_G());
     }
-
-  /* DEBUGGING */
-  printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm);
 }
 
 
@@ -193,7 +180,7 @@ float Get_G(){
 
 void SendNotification(float temperature_from_slave, float gas_from_slave){
     // send notification through wifi
-    delay(1000);
+    Serial.println("Send msg");
   }
 
 boolean checkFunction(float T_Value, float G_Value, float T, float G){
@@ -216,7 +203,7 @@ float returnTemperature(float sensorValue){
   }
 
 
-void printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm){
+void printTest(uint32_t temp, float data0, float data1, uint32_t Distance_cm){
     Serial.println("temp, Clean_Count, Pressure_Count, Gas, Temperature, Distance_cm");
     Serial.print(temp);
     Serial.print(",");
@@ -224,9 +211,9 @@ void printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm)
     Serial.print(",");
     Serial.print(Pressure_Count);
     Serial.print(",");
-    Serial.print(data[0]);
+    Serial.print(data0);
     Serial.print(",");
-    Serial.print(data[1]);
+    Serial.print(data1);
     Serial.print(",");
     Serial.println(Distance_cm);
   }
