@@ -91,7 +91,7 @@ float returnTemperature(float sensorValue);
 /**************************************************************************************/
 
 void setup() {
-  pinMode(triggerpin,OUTPUT);
+  pinMode(trigpin,OUTPUT);
   pinMode(echopin, INPUT);
   Serial.begin(9600);
 
