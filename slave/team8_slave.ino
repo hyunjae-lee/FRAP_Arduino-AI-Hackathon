@@ -58,9 +58,7 @@ void loop(){
   
   delay(1000);
 
-  HC05.print(" data = ");
-  HC05.print(data[0], DEC);
-  HC05.print("  ");
+  HC05.println(data[0], DEC);
   HC05.println(data[1], DEC);
 
 }
