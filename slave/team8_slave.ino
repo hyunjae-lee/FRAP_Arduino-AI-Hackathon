@@ -36,30 +36,31 @@
 */
 #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(2, 3); //블루투스의 Tx, Rx핀을 2번 3번핀으로 설정
+  uint8_t Gas_Value = A0;
+  int Temperature_Value = A1;
+  SoftwareSerial HC05(2,3);
 
-float T_Value; // = 온도 값
-float G_Value; // = 가스 값
-
-void setup() {
-  // 시리얼 통신의 속도를 9600으로 설정
+void setup(){
   Serial.begin(9600);
-  while (!Serial) {
-    ; //시리얼통신이 연결되지 않았다면 코드 실행을 멈추고 무한 반복
-  }
+  HC05.begin(9600);
 
-
-  Serial.println("Hello World!");
-
-  //블루투스와 아두이노의 통신속도를 9600으로 설정
-  mySerial.begin(9600);
+  pinMode(Gas_Value, INPUT);
+  pinMode(Temperature_Value, INPUT);
 }
 
-void loop() { //코드를 무한반복합니다.
-  if (mySerial.available()) { //블루투스에서 넘어온 데이터가 있다면
-    Serial.write(mySerial.read()); //시리얼모니터에 데이터를 출력
-  }
-  if (Serial.available()) {    //시리얼모니터에 입력된 데이터가 있다면
-    mySerial.write(Serial.read());  //블루투스를 통해 입력된 데이터 전달
-  }
+void loop(){
+  int Gas, Temp, data[2];
+  Gas = analogRead(Gas_Value);
+  Temp = analogRead(Temperature_Value);
+
+  data[0] = Gas;
+  data[1] = Temp;
+  
+  delay(1000);
+
+  HC05.print(" data = ");
+  HC05.print(data[0], DEC);
+  HC05.print("  ");
+  HC05.println(data[1], DEC);
+
 }
