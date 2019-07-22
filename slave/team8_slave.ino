@@ -36,7 +36,7 @@
 */
 #include <SoftwareSerial.h>
 
-  uint8_t Gas_Value = A0;
+  int Gas_Value = A0;
   int Temperature_Value = A1;
   SoftwareSerial HC05(2,3);
 
