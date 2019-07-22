@@ -12,18 +12,18 @@
   
   1. Automatic fire report.
     ⚫ Detecting fire extinguisher's weight through a pressure sensor in the box. 
-    è If the fire extinguisher is off for a certain time, TTS ( Text to Speech ) will be initiated.
-    è After passing the certain time, it will notify gas and temperature values at the momenth 
+    ⚫ If the fire extinguisher is off for a certain time, TTS ( Text to Speech ) will be initiated.
+    ⚫ After passing the certain time, it will notify gas and temperature values at the momenth 
       to users through an application.
   
   2. Fire extinguisher maintenance.
     ⚫ There is a ON/OFF switch. When maintenance is began, the switch is supposed to be OFF.
-    è The switch will be ON after passing the certain maintenance time.
-    è As soon as the switch is ON, it will notify the info to the maintenaner.
+    ⚫ The switch will be ON after passing the certain maintenance time.
+    ⚫ As soon as the switch is ON, it will notify the info to the maintenaner.
   
   3. Gas and Temperature remote detection.
     ⚫ Listening to detecting gas and temperature.
-    è If one of them is over its threshold, it will send both data to the main board.
+    ⚫ If one of them is over its threshold, it will send both data to the main board.
 
 [[ Features in MAIN BORAD ]] 
 
@@ -38,6 +38,9 @@
 */
 
 #include "talkie.h"
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(2, 3); //블루투스의 Tx, Rx핀을 2번 3번핀으로 설정
 
 /* Text To Speech */
 Talkie voice;
@@ -62,9 +65,10 @@ const int trigPin = A0;
 const int echoPin = A1;
 
 /* Third-party variables */
-const float D; // = Distance threshold
-const float T; // = Temperature threshold
-const float G; // = Gas threshold
+const float D = 100; // = Distance threshold
+const float T = 100; // = Temperature threshold
+const float G = 100; // = Gas threshold
+int data[2] = {0};
 float duration = 0; 
 float T_Value; // = Temperature value
 float G_Value; // = Gas value
@@ -89,11 +93,24 @@ float returnTemperature(float sensorValue);
 void setup() {
   pinMode(triggerpin,OUTPUT);
   pinMode(echopin, INPUT);
-  Serial.begin(115200);
+  Serial.begin(9600);
+
+  while (!Serial) {
+    ;
+  }
+  
+  Serial.println("Hello World!");
+  mySerial.begin(9600);
 }
 
 void loop() {
   uint8_t temp = daytosecond;
+  
+  if (mySerial.available()) { // data from slave
+    data = mySerial.read();  
+    println(data);
+  }
+  
   /* 1. Fire extinguisher management */
   if ((Clean == false) && (Flag == false)){
       Flag = true;
@@ -120,9 +137,9 @@ void loop() {
   delayMicroseconds(10);
   digitalWrite(triggerpin, LOW);
   duration = pulseIn(echopin,HIGH);
-  uint32_t Distance_mm = Distance(duration);
+  uint32_t Distance_cm = Distance(duration);
   
-  if (Distance_mm > D){
+  if (Distance_cm > D){
       voice.say(speech[Pressure_Count]);
       delay(1000);
       Pressure_Count--;
@@ -141,6 +158,9 @@ void loop() {
   if (checkFunction(Get_T(), Get_G(), T, G){ // one of them is over its threshold.
       SendNotification(Get_T(), Get_G());
     }
+
+  /* DEBUGGING */
+  printTest();
 }
 
 
@@ -160,11 +180,13 @@ uint32_t Distance(float duration){
 
 float Get_T(){
     // return temperature from slave
+    return data[1];
   }
 
   
 float Get_G(){
     // return Gas from slave
+    return data[0];
   }
 
 void SendNotification(float temperature_from_slave, float gas_from_slave){
@@ -174,10 +196,11 @@ void SendNotification(float temperature_from_slave, float gas_from_slave){
 
 boolean checkFunction(float T_Value, float G_Value, float T, float G){
   if(returnTemperature(T_Value) > T || G_Value > G){
-      // add data deletion in main board
       return true; // detection success
-    } 
-  // add data deletion in main board  
+    }
+  else{
+      return false;
+    }
   }
 
 float returnTemperature(float sensorValue){
@@ -188,4 +211,20 @@ float returnTemperature(float sensorValue){
     // Temperature changed from Voltage.
 
   return celsius;
+  }
+
+
+void printTest(){
+    Serial.println("temp, Clean_Count, Pressure_Count, Gas, Temperature, Distance_cm");
+    Serial.print(temp);
+    Serial.print(",");
+    Serial.print(Clean_Count);
+    Serial.print(",");
+    Serial.print(Pressure_Count);
+    Serial.print(",");
+    Serial.print(Gas);
+    Serial.print(",");
+    Serial.print(Temperature);
+    Serial.print(",");
+    Serial.println(Distance_cm);
   }
