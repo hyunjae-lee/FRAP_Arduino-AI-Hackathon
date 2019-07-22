@@ -84,6 +84,7 @@ float Get_T();
 float Get_G();
 void SendNotification(float temperature_from_slave, float gas_from_slave);
 float returnTemperature(float sensorValue);
+void printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm);
 
 /**************************************************************************************/
 /**************************************************************************************/
@@ -91,8 +92,8 @@ float returnTemperature(float sensorValue);
 /**************************************************************************************/
 
 void setup() {
-  pinMode(trigpin,OUTPUT);
-  pinMode(echopin, INPUT);
+  pinMode(trigPin,OUTPUT);
+  pinMode(echoPin, INPUT);
   Serial.begin(9600);
 
   while (!Serial) {
@@ -107,8 +108,9 @@ void loop() {
   uint8_t temp = daytosecond;
   
   if (mySerial.available()) { // data from slave
-    data = mySerial.read();  
-    println(data);
+    data[0] = mySerial.read();
+    data[1] = mySerial.read();  
+    Serial.println(data[0],data[1]);
   }
   
   /* 1. Fire extinguisher management */
@@ -131,12 +133,12 @@ void loop() {
         }
     }
   /* 2. Ultrasonic wave detection */
-  digitalWrite(triggerpin,LOW);
+  digitalWrite(trigPin,LOW);
   delayMicroseconds(2);
-  digitalWrite(triggerpin,HIGH);
+  digitalWrite(trigPin,HIGH);
   delayMicroseconds(10);
-  digitalWrite(triggerpin, LOW);
-  duration = pulseIn(echopin,HIGH);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin,HIGH);
   uint32_t Distance_cm = Distance(duration);
   
   if (Distance_cm > D){
@@ -155,12 +157,12 @@ void loop() {
     }
   
   /* 3. Gas / Temperature checking */
-  if (checkFunction(Get_T(), Get_G(), T, G){ // one of them is over its threshold.
+  if (checkFunction(Get_T(), Get_G(), T, G)){ // one of them is over its threshold.
       SendNotification(Get_T(), Get_G());
     }
 
   /* DEBUGGING */
-  printTest();
+  printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm);
 }
 
 
@@ -214,7 +216,7 @@ float returnTemperature(float sensorValue){
   }
 
 
-void printTest(){
+void printTest(uint8_t temp, float data[0], float data[1], uint32_t Distance_cm){
     Serial.println("temp, Clean_Count, Pressure_Count, Gas, Temperature, Distance_cm");
     Serial.print(temp);
     Serial.print(",");
@@ -222,9 +224,9 @@ void printTest(){
     Serial.print(",");
     Serial.print(Pressure_Count);
     Serial.print(",");
-    Serial.print(Gas);
+    Serial.print(data[0]);
     Serial.print(",");
-    Serial.print(Temperature);
+    Serial.print(data[1]);
     Serial.print(",");
     Serial.println(Distance_cm);
   }
