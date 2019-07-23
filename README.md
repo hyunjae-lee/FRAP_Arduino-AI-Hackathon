@@ -53,10 +53,13 @@
 
   <li> Detecting fire extinguisher's existence through HC-SR04</li>
 
-  <li> Switching to the maintenance mode that doesn't activate sending notifications through </li>
+  <li> Switching to the maintenance mode that doesn't activate sending notifications through a push button</li>
 
-  <li> Sending notifications automatically if some conditions are satisfied through  </li>
-   * conditions [ GAS / TEMPERATURE / PRESSURE ] 
+  <li> Sending notifications automatically if some conditions are satisfied through NodeMCU</li>
+   * conditions [ GAS / TEMPERATURE / ULTRASONIC WAVE ] 
+  
+  <li> Notifying the unique identification of the fire extinguisher through SE-UFNR4-R</li>
+ 
   </ol>
 </p>
 

@@ -36,7 +36,7 @@
 */
 #include <SoftwareSerial.h>
 
-  uint8_t Gas_Value = A0;
+  int Gas_Value = A0;
   int Temperature_Value = A1;
   SoftwareSerial HC05(2,3);
 
@@ -58,9 +58,7 @@ void loop(){
   
   delay(1000);
 
-  HC05.print(" data = ");
-  HC05.print(data[0], DEC);
-  HC05.print("  ");
+  HC05.println(data[0], DEC);
   HC05.println(data[1], DEC);
 
 }
