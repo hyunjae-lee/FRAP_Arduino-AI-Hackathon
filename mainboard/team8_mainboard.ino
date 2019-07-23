@@ -33,7 +33,7 @@
 
 #include "talkie.h"
 #include <SoftwareSerial.h>
-
+#include <Adafruit_NeoPixel.h>
 SoftwareSerial mySerial(2, 3); //블루투스의 Tx, Rx핀을 2번 3번핀으로 설정
 
 /* Text To Speech */
@@ -58,19 +58,34 @@ char *speech[11] = {"spEMERGENCY", "spONE", "spTWO", "spTHREE", "spFOUR", "spFIV
 const int trigPin = A0;
 const int echoPin = A1;
 const int speakPin = A3;
+const int buttPin = A4;
+const int strip_led = A5;
 
 /* Third-party variables */
-const float D = 5; // = Distance threshold
-const float T = 100; // = Temperature threshold
-const float G = 100; // = Gas threshold
+const float D = 2; // = Distance threshold
+const float T = 500; // = Temperature threshold
+const float G = 500; // = Gas threshold
+
 int data[2] = {0};
+int led_num = 20, i;
+int On = 1;
+
+char* Seg_ExtingID = "E-2";
+
 float duration = 0; 
 float T_Value; // = Temperature value
 float G_Value; // = Gas value
+
 uint8_t Pressure_Count = 10; // = 10 seconds.
+uint8_t Sensor_Count = 5; // one notification if 5 alarm is in a row.
+uint16_t Clean_Count = 30; // 30 days 
+
 boolean Clean = true; // ON (If it is ON, it's the time to check and maintain the fire extinguisher.
 boolean Flag = false;
-uint16_t Clean_Count = 30; // 30 days 
+boolean fireOn = false;
+boolean segOn = false;
+
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(led_num, strip_led, NEO_GRB + NEO_KHZ800);
 
 /* Functions */
 boolean checkFunction(float T_Value, float G_Value, float T, float G);
@@ -80,6 +95,9 @@ float Get_G();
 void SendNotification(float temperature_from_slave, float gas_from_slave);
 float returnTemperature(float sensorValue);
 void printTest(uint32_t temp, float data0, float data1, uint32_t Distance_cm);
+void led_red();
+void led_green();
+void led_seperate();
 
 /**************************************************************************************/
 /**************************************************************************************/
@@ -90,13 +108,17 @@ void setup() {
   pinMode(trigPin,OUTPUT);
   pinMode(speakPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  pinMode(buttPin, INPUT);
   Serial.begin(9600);
   
   Serial.println("Hello World!");
   mySerial.begin(9600);
+
+  pixels.begin();
 }
 
-void loop() {
+void loop() { 
+
   uint32_t temp = daytosecond;
   if (mySerial.available()) { // data from slave
 
@@ -104,6 +126,21 @@ void loop() {
     data[0] = mySerial.parseFloat();
     data[1] = mySerial.parseFloat();
   }
+  if (digitalRead(buttPin) == 1){ // button is clicked
+      Clean = false;
+    }
+  
+  if (!segOn){
+      Serial.println(Seg_ExtingID);
+  }
+  
+  if (!fireOn){
+    if (Clean){
+    led_red();
+    }else{
+      led_green();
+      }
+    }
   
   /* 1. Fire extinguisher management */
   if ((Clean == false) && (Flag == false)){
@@ -122,7 +159,9 @@ void loop() {
           Clean_Count = 30;
         }
     }
+  
   /* 2. Ultrasonic wave detection */
+  
   digitalWrite(trigPin,LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin,HIGH);
@@ -130,25 +169,41 @@ void loop() {
   digitalWrite(trigPin, LOW);
   duration = pulseIn(echoPin,HIGH);
   uint32_t Distance_cm = Distance(duration);
-  if (Distance_cm > D){
-      voice.say(speech[Pressure_Count]);
-       /* DEBUGGING */
-      //printTest(temp, data[0], data[1], Distance_cm);
-      Pressure_Count--;
-      if(Pressure_Count == 0){
-        SendNotification(Get_T(), Get_G());
-        voice.say(speech[0]);
+  
+  if (On == 1){
+    if (Distance_cm > D){
+        fireOn = true;
+        voice.say(speech[Pressure_Count]);
+        Pressure_Count--;
+        Serial.println(Pressure_Count);
+        segOn = true;  
+      
+        led_seperate();
+        if(Pressure_Count == 0){
+          SendNotification(Get_T(), Get_G());
+          voice.say(speech[0]);
+          Pressure_Count = 10;
+          On = 0;
+          
+          }
+      }
+    else{
         Pressure_Count = 10;
-        
-        }
     }
-  else{
-      Pressure_Count = 10;
+  }
+
+  if(Distance_cm < D){
+    fireOn = false;
+    On = 1;
     }
   
   /* 3. Gas / Temperature checking */
   if (checkFunction(Get_T(), Get_G(), T, G)){ // one of them is over its threshold.
-      SendNotification(Get_T(), Get_G());
+      Sensor_Count--;
+      if(Sensor_Count == 0){  
+        SendNotification(Get_T(), Get_G());
+        Sensor_Count = 5;
+      }
     }
 }
 
@@ -169,7 +224,7 @@ uint32_t Distance(float duration){
 
 float Get_T(){
     // return temperature from slave
-    return data[1];
+    return returnTemperature(data[1]);
   }
 
   
@@ -184,7 +239,7 @@ void SendNotification(float temperature_from_slave, float gas_from_slave){
   }
 
 boolean checkFunction(float T_Value, float G_Value, float T, float G){
-  if(returnTemperature(T_Value) > T || G_Value > G){
+  if((T_Value > T) || (G_Value > G)){
       return true; // detection success
     }
   else{
@@ -217,3 +272,48 @@ void printTest(uint32_t temp, float data0, float data1, uint32_t Distance_cm){
     Serial.print(",");
     Serial.println(Distance_cm);
   }
+/**************************************************************************************/
+/**************************************************************************************/
+
+                              /* LED  */
+void led_red() {
+  for (i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, 255, 0, 0);
+    pixels.show();
+  }
+}
+
+void led_green() {
+  for (i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, 0, 255, 0);
+    pixels.show();
+  }
+}
+
+void led_red_blink() {
+  for (i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, 255, 0, 0);
+    pixels.show();
+  }
+  delay(500);
+  pixels.clear();
+  pixels.show();
+  delay(500);
+}
+
+void led_seperate(){
+  for (i = 0; i < 10; i++) {
+    pixels.setPixelColor(i, 255, 0, 0);
+    pixels.show();
+  }
+  delay(100);
+  pixels.clear();
+  pixels.show();
+  for( i = 11; i < pixels.numPixels(); i++){
+    pixels.setPixelColor(i, 255, 0, 0);
+    pixels.show();
+  }
+  delay(100);
+  pixels.clear();
+  pixels.show();
+}
