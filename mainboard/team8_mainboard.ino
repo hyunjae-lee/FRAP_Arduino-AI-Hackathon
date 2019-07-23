@@ -184,7 +184,7 @@ void loop() {
           voice.say(speech[0]);
           Pressure_Count = 10;
           On = 0;
-          
+          segOn = false;
           }
       }
     else{
